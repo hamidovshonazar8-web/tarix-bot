@@ -1,22 +1,18 @@
 # -*- coding: utf-8 -*-
 """
 Tarixdan test bot.
-- O'qituvchi (admin) botning o'zida savollarni kiritadi (baza oldindan yo'q, quiz-bot uslubida).
-- O'quvchilar sinf / mavzu / aralash tarzda test ishlaydi.
-- Har bir savolga 15 soniya vaqt beriladi — vaqt tugasa avtomatik xato hisoblanib, keyingi savolga o'tiladi.
-- Har o'quvchining to'g'ri/xato natijalari saqlanadi, umumiy TOP-3 reyting mavjud.
+- O'qituvchi (admin) Mini App ichidagi Profil bo'limi orqali savollarni kiritadi.
+- O'quvchilar test ishlash uchun faqat Mini App'ga yo'naltiriladi (bot ichida test yechilmaydi).
+- Botning o'zi: salomlashuv, Mini App'ga taklif, reyting va shaxsiy natijalarni ko'rsatadi.
 
-Ishga tushirish: python bot.py
+Ishga tushirish: python main.py
 """
 
-import asyncio
 import logging
 
-from aiogram import Bot, Dispatcher, F, Router
+from aiogram import F, Router
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import (
     Message,
     CallbackQuery,
@@ -33,31 +29,11 @@ from config import BOT_TOKEN, ADMIN_IDS, MINIAPP_URL
 logging.basicConfig(level=logging.INFO)
 router = Router()
 
-QUESTIONS_PER_TEST = 10   # bitta testda nechta savol beriladi (mavjud bo'lsa)
-TIMER_SECONDS = 15        # har bir savolga beriladigan vaqt
-
-# Har foydalanuvchi uchun faol "vaqt tugadi" tayrnerini saqlaymiz (bekor qilish uchun)
-pending_timers: dict[int, asyncio.Task] = {}
+TIMER_SECONDS = 15  # Mini App ichida har bir savolga beriladigan vaqt (ma'lumot uchun ko'rsatiladi)
 
 
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
-
-
-def cancel_timer(user_id: int):
-    task = pending_timers.pop(user_id, None)
-    if task and not task.done():
-        task.cancel()
-
-
-# ---------- Holatlar (FSM) ----------
-class TestFlow(StatesGroup):
-    choosing_mode = State()
-    choosing_class = State()
-    choosing_subject = State()
-    choosing_topic = State()
-    in_test = State()
-
 
 
 # ---------- Klaviaturalar ----------
@@ -78,165 +54,17 @@ def start_test_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def mode_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="📚 Sinf bo'yicha", callback_data="mode:class")],
-            [InlineKeyboardButton(text="📖 Mavzu bo'yicha", callback_data="mode:topic")],
-            [InlineKeyboardButton(text="🔀 Aralash test", callback_data="mode:mixed")],
-        ]
-    )
-
-
-def classes_kb(prefix: str = "class") -> InlineKeyboardMarkup:
-    classes = db.get_classes()
-    buttons = [InlineKeyboardButton(text=f"{c}-sinf", callback_data=f"{prefix}:{c}") for c in classes]
-    rows = [buttons[i:i + 3] for i in range(0, len(buttons), 3)]
-    rows.append([InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back:mode")])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-def subjects_kb(class_num: int, prefix: str = "subj") -> InlineKeyboardMarkup:
-    subjects = db.get_subjects(class_num)
-    rows = [[InlineKeyboardButton(text=s, callback_data=f"{prefix}:{i}")] for i, s in enumerate(subjects)]
-    rows.append([InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back:class")])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-def topics_kb(class_num: int, subject: str) -> InlineKeyboardMarkup:
-    topics = db.get_topics(class_num, subject)
-    rows = [[InlineKeyboardButton(text=t, callback_data=f"topic:{i}")] for i, t in enumerate(topics)]
-    rows.append([InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back:subject")])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-def question_kb(options: list[str]) -> InlineKeyboardMarkup:
-    rows = [[InlineKeyboardButton(text=opt, callback_data=f"ans:{i}")] for i, opt in enumerate(options)]
-    return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-def after_test_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🔁 Yana test", callback_data="restart")],
-            [InlineKeyboardButton(text="🏆 Reytingni ko'rish", callback_data="show_top")],
-        ]
-    )
-
-
-def yes_no_kb(yes_data: str, no_data: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="✅ Ha", callback_data=yes_data),
-             InlineKeyboardButton(text="❌ Yo'q", callback_data=no_data)],
-        ]
-    )
-
-
-# ---------- Test jarayoni yordamchi funksiyalari ----------
-import random
-
-
-def prepare_test(questions: list[dict]) -> list[dict]:
-    pool = questions.copy()
-    random.shuffle(pool)
-    chosen = pool[:QUESTIONS_PER_TEST] if len(pool) > QUESTIONS_PER_TEST else pool
-    prepared = []
-    for q in chosen:
-        opts = q["options"].copy()
-        random.shuffle(opts)
-        prepared.append({"q": q["q"], "options": opts, "correct": q["correct"]})
-    return prepared
-
-
-async def send_question(bot: Bot, chat_id: int, user_id: int, state: FSMContext):
-    data = await state.get_data()
-    idx = data["index"]
-    test_questions = data["questions"]
-    q = test_questions[idx]
-    text = f"❓ Savol {idx + 1}/{len(test_questions)}  ⏱ {TIMER_SECONDS} soniya\n\n{q['q']}"
-    sent = await bot.send_message(chat_id, text, reply_markup=question_kb(q["options"]))
-    await state.update_data(current_message_id=sent.message_id)
-
-    cancel_timer(user_id)
-    task = asyncio.create_task(question_timeout(bot, chat_id, user_id, state, idx))
-    pending_timers[user_id] = task
-
-
-async def question_timeout(bot: Bot, chat_id: int, user_id: int, state: FSMContext, expected_index: int):
-    try:
-        await asyncio.sleep(TIMER_SECONDS)
-    except asyncio.CancelledError:
-        return
-
-    current_state = await state.get_state()
-    if current_state != TestFlow.in_test.state:
-        return
-    data = await state.get_data()
-    if not data or data.get("index") != expected_index:
-        return  # foydalanuvchi allaqachon javob bergan / holat o'zgargan
-
-    test_questions = data["questions"]
-    q = test_questions[expected_index]
-    message_id = data.get("current_message_id")
-
-    await state.update_data(wrong=data["wrong"] + 1, index=expected_index + 1)
-
-    try:
-        await bot.edit_message_text(
-            chat_id=chat_id, message_id=message_id,
-            text=f"⏰ Vaqt tugadi! To'g'ri javob: {q['correct']}",
-        )
-    except Exception:
-        pass
-
-    new_data = await state.get_data()
-    if new_data["index"] >= len(test_questions):
-        await finish_test(bot, chat_id, user_id, state)
-    else:
-        await send_question(bot, chat_id, user_id, state)
-
-
-async def finish_test(bot: Bot, chat_id: int, user_id: int, state: FSMContext):
-    cancel_timer(user_id)
-    data = await state.get_data()
-    correct = data["correct"]
-    wrong = data["wrong"]
-    total = correct + wrong
-    percent = round(correct / total * 100) if total else 0
-
-    db.save_attempt(
-        user_id=user_id,
-        mode=data.get("mode"),
-        class_num=data.get("class_num"),
-        subject=data.get("subject"),
-        topic=data.get("topic"),
-        correct=correct,
-        wrong=wrong,
-        total=total,
-    )
-
-    await bot.send_message(
-        chat_id,
-        f"🏁 <b>Test yakunlandi!</b>\n\n"
-        f"✅ To'g'ri javoblar: <b>{correct}</b>\n"
-        f"❌ Xato javoblar: <b>{wrong}</b>\n"
-        f"📊 Jami savollar: {total}\n"
-        f"🎯 Natija: <b>{percent}%</b>\n\n"
-        f"Davom etasizmi?",
-        reply_markup=after_test_kb(),
-        parse_mode="HTML",
-    )
-    await state.clear()
-
-
 # ================= FOYDALANUVCHI HANDLERLARI =================
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     db.register_user(message.from_user.id, message.from_user.full_name, message.from_user.username)
-    admin_hint = "\n\n🔑 Siz adminsiz: Mini App ichidagi Profil bo'limida \"➕ Savol qo'shish\" tugmasi orqali yangi savollar kiritishingiz mumkin." if is_admin(message.from_user.id) else ""
+    admin_hint = (
+        "\n\n🔑 Siz adminsiz: Mini App ichidagi Profil bo'limida \"➕ Savol qo'shish\" "
+        "tugmasi orqali yangi savollar kiritishingiz mumkin."
+        if is_admin(message.from_user.id) else ""
+    )
     await message.answer(
         f"Assalomu alaykum, {message.from_user.first_name}! 👋\n\n"
         "Bu bot orqali <b>tarix</b> fanidan test ishlashingiz mumkin.\n"
@@ -281,12 +109,10 @@ async def start_test_menu(message: Message, state: FSMContext):
     await state.clear()
 
     if not MINIAPP_URL:
-        # MINIAPP_URL sozlanmagan bo'lsa, botning eski ichki test rejimiga tushamiz
-        if db.get_question_count() == 0:
-            await message.answer("Hozircha bazada birorta ham savol yo'q. O'qituvchi savol kiritishini kuting. 🙏")
-            return
-        await state.set_state(TestFlow.choosing_mode)
-        await message.answer("Test turini tanlang 👇", reply_markup=mode_kb())
+        await message.answer(
+            "⚠️ Mini App manzili hali sozlanmagan (MINIAPP_URL). "
+            "Iltimos, admin bilan bog'laning."
+        )
         return
 
     await message.answer(
@@ -300,146 +126,6 @@ async def start_test_menu(message: Message, state: FSMContext):
         parse_mode="HTML",
         reply_markup=start_test_kb(),
     )
-
-
-@router.callback_query(F.data == "restart")
-async def restart_test(callback: CallbackQuery, state: FSMContext):
-    if db.get_question_count() == 0:
-        await callback.message.answer("Hozircha bazada birorta ham savol yo'q.")
-        await callback.answer()
-        return
-    await state.set_state(TestFlow.choosing_mode)
-    await callback.message.answer("Test turini tanlang 👇", reply_markup=mode_kb())
-    await callback.answer()
-
-
-@router.callback_query(F.data == "back:mode")
-async def back_to_mode(callback: CallbackQuery, state: FSMContext):
-    await state.set_state(TestFlow.choosing_mode)
-    await callback.message.edit_text("Test turini tanlang 👇", reply_markup=mode_kb())
-    await callback.answer()
-
-
-@router.callback_query(F.data == "back:class")
-async def back_to_class(callback: CallbackQuery, state: FSMContext):
-    await state.set_state(TestFlow.choosing_class)
-    await callback.message.edit_text("Sinfni tanlang 👇", reply_markup=classes_kb())
-    await callback.answer()
-
-
-@router.callback_query(F.data == "back:subject")
-async def back_to_subject(callback: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    await state.set_state(TestFlow.choosing_subject)
-    await callback.message.edit_text(
-        f"{data['class_num']}-sinf uchun fanni tanlang 👇", reply_markup=subjects_kb(data["class_num"])
-    )
-    await callback.answer()
-
-
-@router.callback_query(TestFlow.choosing_mode, F.data.startswith("mode:"))
-async def choose_mode(callback: CallbackQuery, state: FSMContext):
-    mode = callback.data.split(":")[1]
-    await state.update_data(mode=mode)
-
-    if mode == "mixed":
-        all_qs = db.get_all_questions()
-        prepared = prepare_test(all_qs)
-        await state.update_data(questions=prepared, index=0, correct=0, wrong=0,
-                                 class_num=None, subject="Aralash", topic="Aralash")
-        await state.set_state(TestFlow.in_test)
-        await callback.message.edit_text(f"🔀 Aralash test boshlandi! Jami {len(prepared)} ta savol.\nOmad! 🍀")
-        await send_question(callback.bot, callback.message.chat.id, callback.from_user.id, state)
-    else:
-        await state.set_state(TestFlow.choosing_class)
-        await callback.message.edit_text("Sinfni tanlang 👇", reply_markup=classes_kb())
-    await callback.answer()
-
-
-@router.callback_query(TestFlow.choosing_class, F.data.startswith("class:"))
-async def choose_class(callback: CallbackQuery, state: FSMContext):
-    class_num = int(callback.data.split(":")[1])
-    await state.update_data(class_num=class_num)
-    await state.set_state(TestFlow.choosing_subject)
-    await callback.message.edit_text(
-        f"{class_num}-sinf uchun fanni tanlang 👇", reply_markup=subjects_kb(class_num)
-    )
-    await callback.answer()
-
-
-@router.callback_query(TestFlow.choosing_subject, F.data.startswith("subj:"))
-async def choose_subject(callback: CallbackQuery, state: FSMContext):
-    idx = int(callback.data.split(":")[1])
-    data = await state.get_data()
-    class_num = data["class_num"]
-    subject = db.get_subjects(class_num)[idx]
-    await state.update_data(subject=subject)
-
-    if data["mode"] == "class":
-        qs = db.get_questions_by_subject(class_num, subject)
-        prepared = prepare_test(qs)
-        await state.update_data(questions=prepared, index=0, correct=0, wrong=0, topic="Barcha mavzular")
-        await state.set_state(TestFlow.in_test)
-        await callback.message.edit_text(
-            f"📚 {class_num}-sinf — {subject} testi boshlandi! Jami {len(prepared)} ta savol.\nOmad! 🍀"
-        )
-        await send_question(callback.bot, callback.message.chat.id, callback.from_user.id, state)
-    else:  # mode == topic
-        await state.set_state(TestFlow.choosing_topic)
-        await callback.message.edit_text(
-            f"{class_num}-sinf — {subject}: mavzuni tanlang 👇", reply_markup=topics_kb(class_num, subject)
-        )
-    await callback.answer()
-
-
-@router.callback_query(TestFlow.choosing_topic, F.data.startswith("topic:"))
-async def choose_topic(callback: CallbackQuery, state: FSMContext):
-    topic_idx = int(callback.data.split(":")[1])
-    data = await state.get_data()
-    class_num = data["class_num"]
-    subject = data["subject"]
-    topic = db.get_topics(class_num, subject)[topic_idx]
-
-    qs = db.get_questions_by_topic(class_num, subject, topic)
-    prepared = prepare_test(qs)
-    await state.update_data(questions=prepared, index=0, correct=0, wrong=0, topic=topic)
-    await state.set_state(TestFlow.in_test)
-    await callback.message.edit_text(
-        f"📖 {class_num}-sinf — {subject} — «{topic}»\nJami {len(prepared)} ta savol.\nOmad! 🍀"
-    )
-    await send_question(callback.bot, callback.message.chat.id, callback.from_user.id, state)
-    await callback.answer()
-
-
-@router.callback_query(TestFlow.in_test, F.data.startswith("ans:"))
-async def answer_question(callback: CallbackQuery, state: FSMContext):
-    cancel_timer(callback.from_user.id)
-
-    data = await state.get_data()
-    idx = data["index"]
-    test_questions = data["questions"]
-    q = test_questions[idx]
-
-    chosen_idx = int(callback.data.split(":")[1])
-    chosen_text = q["options"][chosen_idx]
-    is_correct = chosen_text == q["correct"]
-
-    if is_correct:
-        await state.update_data(correct=data["correct"] + 1)
-        await callback.answer("✅ To'g'ri!", show_alert=False)
-    else:
-        await state.update_data(wrong=data["wrong"] + 1)
-        await callback.answer(f"❌ Xato! To'g'ri javob: {q['correct']}", show_alert=True)
-
-    next_index = idx + 1
-    await state.update_data(index=next_index)
-
-    if next_index >= len(test_questions):
-        await callback.message.delete()
-        await finish_test(callback.bot, callback.message.chat.id, callback.from_user.id, state)
-    else:
-        await callback.message.delete()
-        await send_question(callback.bot, callback.message.chat.id, callback.from_user.id, state)
 
 
 @router.callback_query(F.data == "show_top")
@@ -507,6 +193,10 @@ async def my_stats_callback(callback: CallbackQuery):
     await callback.answer()
 
 
+# ================= ADMIN: YORDAMCHI BUYRUQLAR =================
+# (Savol qo'shishning o'zi endi faqat Mini App ichida — Profil bo'limida.
+#  Bu ikkita buyruq esa bot orqali tezkor tekshirish/o'chirish uchun qoldirilgan.)
+
 @router.message(Command("savollar_soni"))
 async def admin_question_count(message: Message):
     if not is_admin(message.from_user.id):
@@ -534,7 +224,6 @@ async def admin_delete_last(message: Message):
 @router.message(Command("bekor"))
 async def cmd_cancel(message: Message, state: FSMContext):
     await state.clear()
-    cancel_timer(message.from_user.id)
     await message.answer("Bekor qilindi.", reply_markup=main_menu_kb())
 
 
