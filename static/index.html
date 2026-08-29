@@ -172,6 +172,12 @@
 
       <div class="section-title" id="achTitle">Yutuqlar</div>
       <div class="ach-grid" id="achGrid"></div>
+
+      <button class="analysis-btn hidden" id="adminAddBtn"
+        style="background:linear-gradient(135deg,#FFE3C0,#FFC15E); color:#7A4B00;">
+        <span>➕ Savol qo'shish (Admin)</span>
+        <span class="menu-arrow">›</span>
+      </button>
     </section>
 
   </main>
@@ -237,6 +243,36 @@
       </div>
       <button class="result-btn primary" id="resultRestartBtn">🔁 Yana test</button>
       <button class="result-btn" id="resultHomeBtn">Bosh sahifaga qaytish</button>
+    </div>
+  </div>
+
+  <!-- ============ ADMIN: SAVOL QO'SHISH OVERLAY ============ -->
+  <div class="overlay hidden" id="adminOverlay">
+    <div class="quiz-top">
+      <button class="quiz-close" id="adminCloseBtn">✕</button>
+      <div class="page-title" style="margin:0; font-size:16px;">➕ Savol qo'shish</div>
+    </div>
+    <div style="overflow-y:auto; flex:1; padding-bottom:20px;">
+      <div class="section-title">Sinf</div>
+      <div class="class-grid" id="adminClassGrid"></div>
+
+      <div class="section-title">Fan</div>
+      <div class="menu-list" id="adminSubjectList"></div>
+
+      <div class="section-title">Mavzu</div>
+      <input type="text" id="adminTopicInput" placeholder="Masalan: Amir Temur va Temuriylar davri"
+        style="width:100%; padding:12px 14px; border-radius:16px; border:2px solid var(--border);
+               font-size:14px; font-family:var(--font-body); background:var(--surface);">
+
+      <div class="section-title">Savol matni</div>
+      <textarea id="adminQuestionInput" rows="3" placeholder="Savolni yozing..."
+        style="width:100%; padding:12px 14px; border-radius:16px; border:2px solid var(--border);
+               font-size:14px; font-family:var(--font-body); background:var(--surface); resize:vertical;"></textarea>
+
+      <div class="section-title">Variantlar (to'g'risini belgilang)</div>
+      <div id="adminOptionsWrap" style="display:flex; flex-direction:column; gap:10px;"></div>
+
+      <button class="result-btn primary" id="adminSubmitBtn" style="margin-top:20px;">✅ Saqlash</button>
     </div>
   </div>
 
