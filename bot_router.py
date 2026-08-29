@@ -59,15 +59,6 @@ class TestFlow(StatesGroup):
     in_test = State()
 
 
-class AdminAddFlow(StatesGroup):
-    choosing_class = State()
-    choosing_subject = State()
-    entering_topic = State()
-    entering_question = State()
-    entering_options = State()
-    choosing_correct = State()
-    ask_continue = State()
-
 
 # ---------- Klaviaturalar ----------
 def main_menu_kb() -> ReplyKeyboardMarkup:
@@ -245,7 +236,7 @@ async def finish_test(bot: Bot, chat_id: int, user_id: int, state: FSMContext):
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     db.register_user(message.from_user.id, message.from_user.full_name, message.from_user.username)
-    admin_hint = "\n\n🔑 Siz adminsiz: /savol_qoshish orqali yangi savollar kiritishingiz mumkin." if is_admin(message.from_user.id) else ""
+    admin_hint = "\n\n🔑 Siz adminsiz: Mini App ichidagi Profil bo'limida \"➕ Savol qo'shish\" tugmasi orqali yangi savollar kiritishingiz mumkin." if is_admin(message.from_user.id) else ""
     await message.answer(
         f"Assalomu alaykum, {message.from_user.first_name}! 👋\n\n"
         "Bu bot orqali <b>tarix</b> fanidan test ishlashingiz mumkin.\n"
@@ -513,167 +504,6 @@ async def my_stats_message(message: Message):
 @router.callback_query(F.data == "my_stats")
 async def my_stats_callback(callback: CallbackQuery):
     await my_stats(callback.message, user_id=callback.from_user.id)
-    await callback.answer()
-
-
-# ================= ADMIN: SAVOL QO'SHISH =================
-
-@router.message(Command("savol_qoshish"))
-async def admin_add_start(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
-        await message.answer("⛔️ Kechirasiz, savol qo'shish faqat adminlar uchun.")
-        return
-    await state.clear()
-    await state.set_state(AdminAddFlow.choosing_class)
-    await message.answer(
-        "➕ <b>Yangi savol qo'shish</b>\n\nAvval sinfni tanlang (yoki yangi sinf raqamini yozing, masalan: 9):",
-        parse_mode="HTML",
-        reply_markup=admin_classes_kb(),
-    )
-
-
-def admin_classes_kb() -> InlineKeyboardMarkup:
-    existing = db.get_classes()
-    all_classes = sorted(set(existing) | set(range(5, 12)))
-    buttons = [InlineKeyboardButton(text=f"{c}-sinf", callback_data=f"aclass:{c}") for c in all_classes]
-    rows = [buttons[i:i + 3] for i in range(0, len(buttons), 3)]
-    return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-@router.callback_query(AdminAddFlow.choosing_class, F.data.startswith("aclass:"))
-async def admin_choose_class(callback: CallbackQuery, state: FSMContext):
-    class_num = int(callback.data.split(":")[1])
-    await state.update_data(class_num=class_num)
-    await state.set_state(AdminAddFlow.choosing_subject)
-    await callback.message.edit_text(
-        f"{class_num}-sinf tanlandi.\n\nEndi fanni tanlang:",
-        reply_markup=admin_subjects_kb(),
-    )
-    await callback.answer()
-
-
-@router.message(AdminAddFlow.choosing_class)
-async def admin_choose_class_text(message: Message, state: FSMContext):
-    if not message.text or not message.text.strip().isdigit():
-        await message.answer("Iltimos, sinf raqamini kiriting (masalan: 9) yoki yuqoridagi tugmalardan tanlang.")
-        return
-    class_num = int(message.text.strip())
-    await state.update_data(class_num=class_num)
-    await state.set_state(AdminAddFlow.choosing_subject)
-    await message.answer(f"{class_num}-sinf tanlandi.\n\nEndi fanni tanlang:", reply_markup=admin_subjects_kb())
-
-
-def admin_subjects_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🏛 O'zbekiston tarixi", callback_data="asubj:O'zbekiston tarixi")],
-            [InlineKeyboardButton(text="🌍 Jahon tarixi", callback_data="asubj:Jahon tarixi")],
-        ]
-    )
-
-
-@router.callback_query(AdminAddFlow.choosing_subject, F.data.startswith("asubj:"))
-async def admin_choose_subject(callback: CallbackQuery, state: FSMContext):
-    subject = callback.data.split(":", 1)[1]
-    await state.update_data(subject=subject)
-    await state.set_state(AdminAddFlow.entering_topic)
-    await callback.message.edit_text(
-        f"Fan: {subject}\n\nEndi mavzu nomini yozing (masalan: «Amir Temur va Temuriylar davri»):"
-    )
-    await callback.answer()
-
-
-@router.message(AdminAddFlow.entering_topic)
-async def admin_enter_topic(message: Message, state: FSMContext):
-    topic = message.text.strip()
-    await state.update_data(topic=topic)
-    await state.set_state(AdminAddFlow.entering_question)
-    await message.answer(
-        f"Mavzu: «{topic}»\n\n✍️ Endi <b>savol matnini</b> yuboring:",
-        parse_mode="HTML",
-    )
-
-
-@router.message(AdminAddFlow.entering_question)
-async def admin_enter_question(message: Message, state: FSMContext):
-    await state.update_data(question_text=message.text.strip())
-    await state.set_state(AdminAddFlow.entering_options)
-    await message.answer(
-        "Endi <b>4 ta javob variantini</b> har birini alohida qatorda yuboring.\n\n"
-        "Namuna:\n<code>Amir Temur\nMirzo Ulug'bek\nShayboniyxon\nAbdullaxon II</code>\n\n"
-        "(Birinchi qator to'g'ri javob bo'lishi shart emas — keyingi qadamda to'g'risini o'zingiz tanlaysiz)",
-        parse_mode="HTML",
-    )
-
-
-@router.message(AdminAddFlow.entering_options)
-async def admin_enter_options(message: Message, state: FSMContext):
-    lines = [line.strip() for line in message.text.split("\n") if line.strip()]
-    if len(lines) != 4:
-        await message.answer(
-            f"❗️ Aniq <b>4 ta</b> variant kerak, siz {len(lines)} ta qator yubordingiz. "
-            "Har birini alohida qatorda qayta yuboring.",
-            parse_mode="HTML",
-        )
-        return
-
-    await state.update_data(options=lines)
-    await state.set_state(AdminAddFlow.choosing_correct)
-    rows = [[InlineKeyboardButton(text=opt, callback_data=f"correct:{i}")] for i, opt in enumerate(lines)]
-    await message.answer(
-        "✅ Qaysi variant <b>to'g'ri javob</b>?",
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
-    )
-
-
-@router.callback_query(AdminAddFlow.choosing_correct, F.data.startswith("correct:"))
-async def admin_choose_correct(callback: CallbackQuery, state: FSMContext):
-    correct_idx = int(callback.data.split(":")[1])
-    data = await state.get_data()
-    options = data["options"]
-    correct_text = options[correct_idx]
-
-    db.add_question(
-        class_num=data["class_num"],
-        subject=data["subject"],
-        topic=data["topic"],
-        question=data["question_text"],
-        options=options,
-        correct=correct_text,
-        added_by=callback.from_user.id,
-    )
-
-    await callback.message.edit_text(
-        f"✅ Savol saqlandi!\n\n"
-        f"📚 {data['class_num']}-sinf — {data['subject']} — «{data['topic']}»\n"
-        f"❓ {data['question_text']}\n"
-        f"✅ To'g'ri javob: {correct_text}"
-    )
-    await state.set_state(AdminAddFlow.ask_continue)
-    await callback.message.answer(
-        "Yana shu mavzuga savol qo'shasizmi?",
-        reply_markup=yes_no_kb("cont:same", "cont:new"),
-    )
-    await callback.answer()
-
-
-@router.callback_query(AdminAddFlow.ask_continue, F.data == "cont:same")
-async def admin_continue_same(callback: CallbackQuery, state: FSMContext):
-    await state.set_state(AdminAddFlow.entering_question)
-    await callback.message.edit_text("✍️ Keyingi savol matnini yuboring:")
-    await callback.answer()
-
-
-@router.callback_query(AdminAddFlow.ask_continue, F.data == "cont:new")
-async def admin_continue_new(callback: CallbackQuery, state: FSMContext):
-    total = db.get_question_count()
-    await callback.message.edit_text(
-        f"👍 Bo'ldi! Hozircha bazada jami <b>{total}</b> ta savol bor.\n\n"
-        "Yangi savol qo'shish uchun /savol_qoshish, testni sinash uchun \"📝 Test boshlash\" tugmasini bosing.",
-        parse_mode="HTML",
-    )
-    await state.clear()
     await callback.answer()
 
 
