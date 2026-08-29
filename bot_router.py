@@ -71,15 +71,20 @@ class AdminAddFlow(StatesGroup):
 
 # ---------- Klaviaturalar ----------
 def main_menu_kb() -> ReplyKeyboardMarkup:
-    rows = []
-    if MINIAPP_URL:
-        rows.append([KeyboardButton(text="🎮 Mini ilovani ochish", web_app=WebAppInfo(url=MINIAPP_URL))])
-    rows += [
-        [KeyboardButton(text="📝 Test boshlash")],
-        [KeyboardButton(text="🏆 Reyting"), KeyboardButton(text="📊 Mening natijalarim")],
-        [KeyboardButton(text="ℹ️ Yordam")],
+    rows = [
+        [KeyboardButton(text="🎓 Test ishlash")],
+        [KeyboardButton(text="🔥 VIP obuna"), KeyboardButton(text="ℹ️ Ma'lumot va yordam")],
     ]
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
+
+
+def start_test_kb() -> InlineKeyboardMarkup:
+    buttons = []
+    if MINIAPP_URL:
+        buttons.append(
+            [InlineKeyboardButton(text="🎓 Testni boshlash", web_app=WebAppInfo(url=MINIAPP_URL))]
+        )
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def mode_kb() -> InlineKeyboardMarkup:
@@ -250,25 +255,60 @@ async def cmd_start(message: Message, state: FSMContext):
     )
 
 
-@router.message(F.text == "ℹ️ Yordam")
+@router.message(F.text == "ℹ️ Ma'lumot va yordam")
 @router.message(Command("help"))
 async def cmd_help(message: Message):
     await message.answer(
-        "📝 <b>Test boshlash</b> — sinf, mavzu yoki aralash tarzda test ishlaysiz.\n"
-        "🏆 <b>Reyting</b> — eng ko'p to'g'ri javob bergan top-3 o'quvchi.\n"
+        "🎓 <b>Test ishlash</b> — ilova orqali fanlar bo'yicha yoki aralash tarzda test ishlaysiz.\n"
+        "🏆 <b>Reyting</b> — eng ko'p to'g'ri javob bergan o'quvchilar.\n"
         "📊 <b>Mening natijalarim</b> — sizning umumiy statistikangiz.\n\n"
         f"⏱ Har bir savolga {TIMER_SECONDS} soniya vaqt beriladi — ulgurmasangiz, xato hisoblanadi.",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🏆 Reyting", callback_data="show_top")],
+                [InlineKeyboardButton(text="📊 Mening natijalarim", callback_data="my_stats")],
+            ]
+        ),
+    )
+
+
+@router.message(F.text == "🔥 VIP obuna")
+async def vip_subscription(message: Message):
+    # TODO: bu yerga haqiqiy VIP imkoniyatlar va to'lov havolasini qo'shing
+    await message.answer(
+        "🔥 <b>VIP obuna</b>\n\n"
+        "Tez orada bu yerda maxsus imkoniyatlar bo'ladi: qo'shimcha mavzular, "
+        "reklamasiz test va boshqa bonuslar.\n\n"
+        "Hozircha bu bo'lim ishlab chiqilmoqda — tez orada e'lon qilamiz! 🚀",
         parse_mode="HTML",
     )
 
 
-@router.message(F.text == "📝 Test boshlash")
+@router.message(F.text == "🎓 Test ishlash")
 async def start_test_menu(message: Message, state: FSMContext):
-    if db.get_question_count() == 0:
-        await message.answer("Hozircha bazada birorta ham savol yo'q. O'qituvchi savol kiritishini kuting. 🙏")
+    await state.clear()
+
+    if not MINIAPP_URL:
+        # MINIAPP_URL sozlanmagan bo'lsa, botning eski ichki test rejimiga tushamiz
+        if db.get_question_count() == 0:
+            await message.answer("Hozircha bazada birorta ham savol yo'q. O'qituvchi savol kiritishini kuting. 🙏")
+            return
+        await state.set_state(TestFlow.choosing_mode)
+        await message.answer("Test turini tanlang 👇", reply_markup=mode_kb())
         return
-    await state.set_state(TestFlow.choosing_mode)
-    await message.answer("Test turini tanlang 👇", reply_markup=mode_kb())
+
+    await message.answer(
+        "🎓 <b>Testlarni boshlaymizmi?</b>\n\n"
+        "Quyidagi tugmani bosing — ilova ochiladi va Telegram orqali "
+        "parolsiz, avtomatik kirasiz.\n\n"
+        "📚 Fanlar bo'yicha testlar\n"
+        "🏆 Mavsum musobaqalari va reyting\n"
+        "🔥 Kunlik seriya va yutuqlar\n\n"
+        "👇 Bir bosishda boshlang",
+        parse_mode="HTML",
+        reply_markup=start_test_kb(),
+    )
 
 
 @router.callback_query(F.data == "restart")
@@ -443,16 +483,16 @@ async def send_top(message: Message, requester_id: int):
     await message.answer("\n".join(lines), parse_mode="HTML")
 
 
-@router.message(F.text == "📊 Mening natijalarim")
-async def my_stats(message: Message):
-    stats = db.get_user_stats(message.from_user.id)
+async def my_stats(message: Message, user_id: int | None = None):
+    uid = user_id if user_id is not None else message.from_user.id
+    stats = db.get_user_stats(uid)
     if not stats or stats["total_tests"] == 0:
-        await message.answer("Siz hali birorta test ishlamagansiz. \"📝 Test boshlash\" tugmasini bosing!")
+        await message.answer("Siz hali birorta test ishlamagansiz. \"🎓 Test ishlash\" tugmasini bosing!")
         return
 
     total = stats["total_correct"] + stats["total_wrong"]
     percent = round(stats["total_correct"] / total * 100) if total else 0
-    rank, total_players = db.get_user_rank(message.from_user.id)
+    rank, total_players = db.get_user_rank(uid)
 
     await message.answer(
         f"📊 <b>Sizning natijalaringiz</b>\n\n"
@@ -463,6 +503,17 @@ async def my_stats(message: Message):
         f"🏆 Reytingdagi o'rningiz: <b>{rank}</b> / {total_players}",
         parse_mode="HTML",
     )
+
+
+@router.message(F.text == "📊 Mening natijalarim")
+async def my_stats_message(message: Message):
+    await my_stats(message)
+
+
+@router.callback_query(F.data == "my_stats")
+async def my_stats_callback(callback: CallbackQuery):
+    await my_stats(callback.message, user_id=callback.from_user.id)
+    await callback.answer()
 
 
 # ================= ADMIN: SAVOL QO'SHISH =================
