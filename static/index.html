@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tarix Test</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+
+<!-- SVG gradientlar (ikonkalar uchun) -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="gradViolet" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8B7CF6"/><stop offset="100%" stop-color="#6C5CE7"/>
+    </linearGradient>
+    <linearGradient id="gradOrange" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFC15E"/><stop offset="100%" stop-color="#FF9F3E"/>
+    </linearGradient>
+    <linearGradient id="gradGreen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4ADE80"/><stop offset="100%" stop-color="#22C55E"/>
+    </linearGradient>
+    <linearGradient id="gradPink" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF8FB1"/><stop offset="100%" stop-color="#FF5A8C"/>
+    </linearGradient>
+    <linearGradient id="gradBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6ED0FF"/><stop offset="100%" stop-color="#3AA9F0"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div id="app">
+
+  <!-- Yuqori panel -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-badge">📜</div>
+      <span class="brand-name">Tarix Test</span>
+    </div>
+    <div class="level-pill" id="levelPill">
+      <span id="levelValue">1</span>
+    </div>
+  </header>
+
+  <main id="content">
+
+    <!-- ============ BOSH ============ -->
+    <section class="tab-panel" id="tab-home">
+      <div class="hero-card">
+        <div class="hero-text">
+          <div class="hero-greeting" id="homeGreeting">Xush kelibsiz!</div>
+          <div class="hero-sub">Tarixdan bilimingizni sinab ko'ring</div>
+        </div>
+        <button class="hero-cta" id="homeStartBtn">
+          🚀 Test boshlash
+        </button>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:url(#gradGreen)"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="url(#gradGreen)" d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></div>
+          <div class="stat-value" id="homeAccuracy">—</div>
+          <div class="stat-label">Aniqlik</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="url(#gradBlue)" d="M4 4h16v2H4zm0 7h16v2H4zm0 7h10v2H4z"/></svg></div>
+          <div class="stat-value" id="homeTests">0</div>
+          <div class="stat-label">Yechilgan test</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="url(#gradOrange)" d="M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+          <div class="stat-value" id="homeRank">—</div>
+          <div class="stat-label">Reytingdagi o'rin</div>
+        </div>
+      </div>
+
+      <div class="section-title">Bo'limlar</div>
+      <div class="menu-list">
+        <button class="menu-row" data-goto="tests">
+          <span class="menu-icon" style="background:linear-gradient(135deg,#8B7CF6,#6C5CE7)">📚</span>
+          <span class="menu-text">
+            <span class="menu-title">Testlar</span>
+            <span class="menu-sub">Sinf va mavzu bo'yicha</span>
+          </span>
+          <span class="menu-arrow">›</span>
+        </button>
+        <button class="menu-row" data-goto="rating">
+          <span class="menu-icon" style="background:linear-gradient(135deg,#FFC15E,#FF9F3E)">🏆</span>
+          <span class="menu-text">
+            <span class="menu-title">Reyting</span>
+            <span class="menu-sub">Eng yaxshi o'quvchilar</span>
+          </span>
+          <span class="menu-arrow">›</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ============ TESTLAR ============ -->
+    <section class="tab-panel" id="tab-tests">
+      <div class="page-title">Testlar</div>
+      <button class="mixed-card" id="mixedTestBtn">
+        <span class="mixed-icon">🔀</span>
+        <span class="menu-text">
+          <span class="menu-title">Aralash test</span>
+          <span class="menu-sub">Barcha sinf va fanlardan</span>
+        </span>
+        <span class="menu-arrow">›</span>
+      </button>
+
+      <div id="testsTreeWrap">
+        <div class="section-title">Sinf tanlang</div>
+        <div class="class-grid" id="classGrid"></div>
+      </div>
+
+      <div id="subjectsWrap" class="hidden">
+        <button class="back-row" id="backToClasses">‹ Sinflarga qaytish</button>
+        <div class="section-title" id="subjectsTitle">Fan tanlang</div>
+        <div class="menu-list" id="subjectsList"></div>
+      </div>
+
+      <div id="topicsWrap" class="hidden">
+        <button class="back-row" id="backToSubjects">‹ Fanlarga qaytish</button>
+        <div class="section-title" id="topicsTitle">Mavzu tanlang</div>
+        <div class="menu-list" id="topicsList"></div>
+      </div>
+    </section>
+
+    <!-- ============ MAVSUM ============ -->
+    <section class="tab-panel" id="tab-season">
+      <div class="page-title">Bu oylik reyting 🌱</div>
+      <div class="hint-text">Har oy boshida reyting yangidan boshlanadi — shu oyda eng ko'p to'g'ri javob bergan o'quvchilar.</div>
+      <div class="my-rank-card" id="seasonMyRank"></div>
+      <div class="rating-list" id="seasonList"></div>
+    </section>
+
+    <!-- ============ REYTING ============ -->
+    <section class="tab-panel" id="tab-rating">
+      <div class="page-title">Umumiy reyting 🏆</div>
+      <div class="my-rank-card" id="ratingMyRank"></div>
+      <div class="rating-list" id="ratingList"></div>
+    </section>
+
+    <!-- ============ PROFIL ============ -->
+    <section class="tab-panel" id="tab-profile">
+      <div class="profile-header">
+        <div class="avatar-wrap">
+          <div class="avatar" id="profileAvatar">?</div>
+          <div class="level-badge" id="profileLevelBadge">1</div>
+        </div>
+        <div class="profile-name" id="profileName">—</div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="profileTests">0</div>
+          <div class="stat-label">yechilgan test</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="profileAccuracy">—</div>
+          <div class="stat-label">o'rtacha natija</div>
+        </div>
+      </div>
+
+      <button class="analysis-btn" id="analysisBtn">
+        <span>📊 Mening tahlilim</span>
+        <span class="menu-arrow">›</span>
+      </button>
+      <div id="breakdownWrap" class="hidden breakdown-wrap"></div>
+
+      <div class="section-title" id="achTitle">Yutuqlar</div>
+      <div class="ach-grid" id="achGrid"></div>
+    </section>
+
+  </main>
+
+  <!-- Pastki navigatsiya -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="home">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 3 2 12h3v8h6v-6h2v6h6v-8h3z"/></svg>
+      <span>Bosh</span>
+    </button>
+    <button class="nav-btn" data-tab="tests">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M4 4h11a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2zm2 2v11h9V6zM17 8h3v12h-3z"/></svg>
+      <span>Testlar</span>
+    </button>
+    <button class="nav-btn" data-tab="season">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 2c1 3-1 4-1 6a3 3 0 1 0 6 0c2 2 3 5 3 7a8 8 0 1 1-16 0c0-4 3-7 8-13z"/></svg>
+      <span>Mavsum</span>
+    </button>
+    <button class="nav-btn" data-tab="rating">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M7 4h10v3a5 5 0 0 1-4 4.9V15h3v2H8v-2h3v-3.1A5 5 0 0 1 7 7zm-4 1h3v2a4 4 0 0 1-3 3.9zm18 0v5.9a4 4 0 0 1-3-3.9V5z"/></svg>
+      <span>Reyting</span>
+    </button>
+    <button class="nav-btn" data-tab="profile">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-9 2.2-9 5v3h18v-3c0-2.8-4.6-5-9-5z"/></svg>
+      <span>Profil</span>
+    </button>
+  </nav>
+
+  <!-- ============ TEST OVERLAY ============ -->
+  <div class="overlay hidden" id="quizOverlay">
+    <div class="quiz-top">
+      <button class="quiz-close" id="quizCloseBtn">✕</button>
+      <div class="quiz-progress"><div class="quiz-progress-fill" id="quizProgressFill"></div></div>
+      <div class="timer-ring">
+        <svg viewBox="0 0 44 44" width="44" height="44">
+          <circle cx="22" cy="22" r="19" class="timer-track"/>
+          <circle cx="22" cy="22" r="19" class="timer-fill" id="timerCircle"/>
+        </svg>
+        <span class="timer-number" id="timerNumber">15</span>
+      </div>
+    </div>
+    <div class="quiz-body">
+      <div class="quiz-qnum" id="quizQnum">Savol 1/10</div>
+      <div class="quiz-question" id="quizQuestion">—</div>
+      <div class="quiz-options" id="quizOptions"></div>
+    </div>
+  </div>
+
+  <!-- ============ NATIJA OVERLAY ============ -->
+  <div class="overlay hidden" id="resultOverlay">
+    <div class="result-card">
+      <div class="result-ring-wrap">
+        <svg viewBox="0 0 120 120" width="140" height="140">
+          <circle cx="60" cy="60" r="52" class="result-track"/>
+          <circle cx="60" cy="60" r="52" class="result-fill" id="resultRing"/>
+        </svg>
+        <div class="result-percent" id="resultPercent">0%</div>
+      </div>
+      <div class="result-title" id="resultTitle">Test yakunlandi!</div>
+      <div class="result-stats">
+        <div class="result-stat"><span class="dot dot-green"></span><span id="resultCorrect">0</span> to'g'ri</div>
+        <div class="result-stat"><span class="dot dot-red"></span><span id="resultWrong">0</span> xato</div>
+      </div>
+      <button class="result-btn primary" id="resultRestartBtn">🔁 Yana test</button>
+      <button class="result-btn" id="resultHomeBtn">Bosh sahifaga qaytish</button>
+    </div>
+  </div>
+
+  <!-- ============ TOAST / XATOLIK ============ -->
+  <div class="toast hidden" id="toast"></div>
+
+</div>
+
+<script src="/assets/app.js"></script>
+</body>
+</html>
