@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 import database as db
 from auth import validate_init_data
-from config import BOT_TOKEN
+from config import BOT_TOKEN, ADMIN_IDS
 
 BASE_DIR = Path(__file__).parent
 STATIC_DIR = BASE_DIR / "static"
@@ -49,6 +49,17 @@ def ensure_user(tg_user: dict):
     db.register_user(tg_user["id"], full_name, tg_user.get("username"))
 
 
+def is_admin(user_id: int) -> bool:
+    return user_id in ADMIN_IDS
+
+
+def require_admin(x_init_data: str | None) -> dict:
+    tg_user = get_user_from_header(x_init_data)
+    if not is_admin(tg_user["id"]):
+        raise HTTPException(status_code=403, detail="Bu amal faqat adminlar uchun")
+    return tg_user
+
+
 # ---------- Pydantic modellar ----------
 class TestStartRequest(BaseModel):
     mode: str            # "class" | "topic" | "mixed"
@@ -65,6 +76,15 @@ class AnswerRequest(BaseModel):
 
 class FinishRequest(BaseModel):
     session_id: str
+
+
+class AdminQuestionRequest(BaseModel):
+    class_num: int
+    subject: str
+    topic: str
+    question: str
+    options: list[str]
+    correct_index: int
 
 
 # ---------- Foydalanuvchi / profil ----------
@@ -91,6 +111,7 @@ def api_me(x_init_data: str | None = Header(default=None)):
         "rank": rank,
         "total_players": total_players,
         "level": level,
+        "is_admin": is_admin(tg_user["id"]),
     }
 
 
@@ -266,6 +287,57 @@ def api_test_finish(req: FinishRequest, x_init_data: str | None = Header(default
         correct=correct, wrong=wrong, total=total,
     )
     return {"correct": correct, "wrong": wrong, "total": total, "percent": percent}
+
+
+# ---------- ADMIN: savol qo'shish (Mini App ichida) ----------
+ADMIN_SUBJECTS = ["O'zbekiston tarixi", "Jahon tarixi"]
+ADMIN_CLASSES = list(range(5, 12))
+
+
+@app.get("/api/admin/meta")
+def api_admin_meta(x_init_data: str | None = Header(default=None)):
+    require_admin(x_init_data)
+    return {
+        "classes": ADMIN_CLASSES,
+        "subjects": ADMIN_SUBJECTS,
+        "total_questions": db.get_question_count(),
+    }
+
+
+@app.post("/api/admin/question")
+def api_admin_add_question(req: AdminQuestionRequest, x_init_data: str | None = Header(default=None)):
+    tg_user = require_admin(x_init_data)
+
+    options = [o.strip() for o in req.options if o.strip()]
+    if len(options) != 4:
+        raise HTTPException(400, "Aniq 4 ta variant kerak")
+    if not (0 <= req.correct_index < 4):
+        raise HTTPException(400, "Noto'g'ri to'g'ri javob indeksi")
+    if not req.question.strip():
+        raise HTTPException(400, "Savol matni bo'sh bo'lishi mumkin emas")
+    if not req.topic.strip():
+        raise HTTPException(400, "Mavzu nomi bo'sh bo'lishi mumkin emas")
+
+    correct_text = options[req.correct_index]
+    qid = db.add_question(
+        class_num=req.class_num,
+        subject=req.subject,
+        topic=req.topic.strip(),
+        question=req.question.strip(),
+        options=options,
+        correct=correct_text,
+        added_by=tg_user["id"],
+    )
+    return {"id": qid, "total_questions": db.get_question_count()}
+
+
+@app.delete("/api/admin/question/last")
+def api_admin_delete_last(x_init_data: str | None = Header(default=None)):
+    tg_user = require_admin(x_init_data)
+    ok = db.delete_last_question(tg_user["id"])
+    if not ok:
+        raise HTTPException(404, "Siz hali savol qo'shmagansiz")
+    return {"deleted": True, "total_questions": db.get_question_count()}
 
 
 # ---------- Statik fayllar (Mini App frontend) ----------
