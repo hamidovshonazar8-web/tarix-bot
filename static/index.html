@@ -11,6 +11,40 @@
 </head>
 <body>
 
+<!-- Fon manzarasi (yengil vektor tasvir — har ekranda aniq, light/dark rejimga avtomatik moslashadi) -->
+<div class="bg-scene" aria-hidden="true">
+  <svg viewBox="0 0 500 1000" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" style="stop-color:var(--primary-light)"/>
+        <stop offset="45%" style="stop-color:var(--bg)"/>
+        <stop offset="100%" style="stop-color:var(--bg)"/>
+      </linearGradient>
+      <linearGradient id="hillBack" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" style="stop-color:var(--primary)"/>
+        <stop offset="100%" style="stop-color:var(--primary-dark)"/>
+      </linearGradient>
+      <linearGradient id="hillFront" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" style="stop-color:var(--primary-dark)"/>
+        <stop offset="100%" style="stop-color:var(--text)"/>
+      </linearGradient>
+    </defs>
+    <rect width="500" height="1000" fill="url(#skyGrad)"/>
+    <circle cx="375" cy="150" r="68" fill="var(--orange)" opacity="0.5"/>
+    <g opacity="0.3" fill="var(--surface)">
+      <ellipse cx="110" cy="120" rx="70" ry="22"/>
+      <ellipse cx="165" cy="108" rx="48" ry="17"/>
+      <ellipse cx="300" cy="215" rx="55" ry="17"/>
+    </g>
+    <g stroke="var(--muted)" stroke-width="3" fill="none" opacity="0.45" stroke-linecap="round">
+      <path d="M55,210 q10,-12 20,0 q10,-12 20,0"/>
+      <path d="M105,250 q8,-10 16,0 q8,-10 16,0"/>
+    </g>
+    <path d="M0,560 C90,495 160,540 250,495 C340,450 420,515 500,470 L500,1000 L0,1000 Z" fill="url(#hillBack)" opacity="0.16"/>
+    <path d="M0,650 C100,595 190,660 280,605 C370,550 440,625 500,585 L500,1000 L0,1000 Z" fill="url(#hillFront)" opacity="0.13"/>
+  </svg>
+</div>
+
 <!-- SVG gradientlar (ikonkalar uchun) -->
 <svg width="0" height="0" style="position:absolute">
   <defs>
