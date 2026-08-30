@@ -3,9 +3,16 @@ const tg = window.Telegram ? window.Telegram.WebApp : null;
 if (tg) {
   tg.ready();
   tg.expand();
-  try { tg.setHeaderColor('#F3F1FA'); } catch (e) {}
 }
 const INIT_DATA = tg ? tg.initData : "";
+
+const THEME_BG = { light: "#F3F1FA", dark: "#14111F" };
+function syncTelegramChrome(resolvedTheme) {
+  if (!tg) return;
+  const color = THEME_BG[resolvedTheme] || THEME_BG.light;
+  try { tg.setHeaderColor(color); } catch (e) {}
+  try { tg.setBackgroundColor(color); } catch (e) {}
+}
 
 // ============ API yordamchisi ============
 async function api(path, options = {}) {
@@ -423,8 +430,6 @@ async function loadProfile() {
       item.innerHTML = `<div class="ach-icon">${ACH_ICONS[a.icon] || "🏅"}</div><div class="ach-name">${a.title}</div>`;
       achGrid.appendChild(item);
     });
-
-    document.getElementById("adminAddBtn").classList.toggle("hidden", !me.is_admin);
   } catch (e) {
     showToast(e.message);
   }
@@ -458,126 +463,71 @@ document.getElementById("analysisBtn").addEventListener("click", async () => {
   }
 });
 
-// ============ ADMIN: SAVOL QO'SHISH ============
-let ADMIN_META = null;
-let adminSelectedClass = null;
-let adminSelectedSubject = null;
+// ============ Mavzu (Yorug' / Qorong'i / Tizim) ============
+const THEME_KEY = "tarix_theme_pref";
 
-function renderAdminOptions() {
-  const wrap = document.getElementById("adminOptionsWrap");
-  wrap.innerHTML = "";
-  for (let i = 0; i < 4; i++) {
-    const row = document.createElement("div");
-    row.className = "quiz-option";
-    row.style.display = "flex";
-    row.style.alignItems = "center";
-    row.style.gap = "10px";
-    row.style.cursor = "default";
-    row.innerHTML = `
-      <input type="radio" name="adminCorrect" value="${i}" ${i === 0 ? "checked" : ""}
-        style="width:18px; height:18px; flex-shrink:0; accent-color:var(--primary);">
-      <input type="text" class="admin-option-input" data-idx="${i}" placeholder="${i + 1}-variant"
-        style="flex:1; border:none; outline:none; font-size:14px; font-family:var(--font-body); background:transparent;">
-    `;
-    wrap.appendChild(row);
-  }
+function resolveTheme(pref) {
+  if (pref !== "system") return pref;
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg && tg.colorScheme) return tg.colorScheme;
+  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
+  return "light";
 }
 
-function renderAdminClasses() {
-  const grid = document.getElementById("adminClassGrid");
-  grid.innerHTML = "";
-  (ADMIN_META?.classes || []).forEach((c) => {
-    const btn = document.createElement("button");
-    btn.className = "class-card";
-    btn.innerHTML = `<div class="class-num">${c}</div><div class="class-label">sinf</div>`;
-    btn.addEventListener("click", () => {
-      adminSelectedClass = c;
-      document.querySelectorAll("#adminClassGrid .class-card").forEach((b) => (b.style.outline = ""));
-      btn.style.outline = "2px solid var(--primary)";
-    });
-    grid.appendChild(btn);
+function applyTheme() {
+  const pref = localStorage.getItem(THEME_KEY) || "system";
+  const resolved = resolveTheme(pref);
+  document.documentElement.setAttribute("data-theme", resolved);
+  syncTelegramChrome(resolved);
+
+  document.querySelectorAll(".theme-option").forEach((btn) => {
+    const isSelected = btn.dataset.themeChoice === pref;
+    btn.classList.toggle("selected", isSelected);
+    const slot = btn.querySelector(".check-slot");
+    slot.textContent = isSelected ? "✓ " : "";
   });
 }
 
-function renderAdminSubjects() {
-  const list = document.getElementById("adminSubjectList");
-  list.innerHTML = "";
-  (ADMIN_META?.subjects || []).forEach((s) => {
-    const row = document.createElement("button");
-    row.className = "menu-row";
-    row.innerHTML = `
-      <span class="menu-icon" style="background:linear-gradient(135deg,#8B7CF6,#6C5CE7)">${s.includes("Jahon") ? "🌍" : "🏛"}</span>
-      <span class="menu-text"><span class="menu-title">${s}</span></span>`;
-    row.addEventListener("click", () => {
-      adminSelectedSubject = s;
-      document.querySelectorAll("#adminSubjectList .menu-row").forEach((r) => (r.style.outline = ""));
-      row.style.outline = "2px solid var(--primary)";
-    });
-    list.appendChild(row);
-  });
-}
-
-async function openAdminOverlay() {
-  document.getElementById("adminOverlay").classList.remove("hidden");
-  document.getElementById("adminTopicInput").value = "";
-  document.getElementById("adminQuestionInput").value = "";
-  renderAdminOptions();
-
-  if (!ADMIN_META) {
-    try {
-      ADMIN_META = await api("/api/admin/meta");
-    } catch (e) {
-      showToast(e.message);
-      document.getElementById("adminOverlay").classList.add("hidden");
-      return;
-    }
-  }
-  renderAdminClasses();
-  renderAdminSubjects();
-}
-
-document.getElementById("adminAddBtn")?.addEventListener("click", openAdminOverlay);
-document.getElementById("adminCloseBtn")?.addEventListener("click", () => {
-  document.getElementById("adminOverlay").classList.add("hidden");
-});
-
-document.getElementById("adminSubmitBtn")?.addEventListener("click", async () => {
-  const topic = document.getElementById("adminTopicInput").value.trim();
-  const question = document.getElementById("adminQuestionInput").value.trim();
-  const optionInputs = document.querySelectorAll(".admin-option-input");
-  const options = Array.from(optionInputs).map((el) => el.value.trim());
-  const correctRadio = document.querySelector('input[name="adminCorrect"]:checked');
-
-  if (!adminSelectedClass) { showToast("Avval sinfni tanlang"); return; }
-  if (!adminSelectedSubject) { showToast("Avval fanni tanlang"); return; }
-  if (!topic) { showToast("Mavzu nomini yozing"); return; }
-  if (!question) { showToast("Savol matnini yozing"); return; }
-  if (options.some((o) => !o)) { showToast("Barcha 4 ta variantni to'ldiring"); return; }
-
+function setThemePref(pref) {
   try {
-    await api("/api/admin/question", {
-      method: "POST",
-      body: JSON.stringify({
-        class_num: adminSelectedClass,
-        subject: adminSelectedSubject,
-        topic: topic,
-        question: question,
-        options: options,
-        correct_index: Number(correctRadio.value),
-      }),
-    });
-    showToast("✅ Savol saqlandi! Yana qo'sha olasiz.");
-    document.getElementById("adminQuestionInput").value = "";
-    renderAdminOptions();
-    TREE = null; // testlar daraxti keshini tozalab, yangi savol darhol ko'rinishi uchun
-    if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-  } catch (e) {
-    showToast(e.message);
+    localStorage.setItem(THEME_KEY, pref);
+  } catch (e) { /* localStorage bloklangan bo'lsa - jim o'tamiz */ }
+  applyTheme();
+}
+
+document.getElementById("settingsBtn").addEventListener("click", () => {
+  applyTheme();
+  document.getElementById("themeSheetBackdrop").classList.remove("hidden");
+});
+document.getElementById("themeSheetClose").addEventListener("click", () => {
+  document.getElementById("themeSheetBackdrop").classList.add("hidden");
+});
+document.getElementById("themeSheetBackdrop").addEventListener("click", (e) => {
+  if (e.target.id === "themeSheetBackdrop") {
+    document.getElementById("themeSheetBackdrop").classList.add("hidden");
   }
 });
+document.querySelectorAll(".theme-option").forEach((btn) => {
+  btn.addEventListener("click", () => setThemePref(btn.dataset.themeChoice));
+});
+
+// Foydalanuvchi Telegram ilovasidagi mavzuni o'zgartirsa (va "Tizim" tanlangan bo'lsa) - avtomatik moslashadi
+if (tg && tg.onEvent) {
+  tg.onEvent("themeChanged", () => {
+    const pref = localStorage.getItem(THEME_KEY) || "system";
+    if (pref === "system") applyTheme();
+  });
+}
+if (window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    const pref = localStorage.getItem(THEME_KEY) || "system";
+    if (pref === "system") applyTheme();
+  });
+}
 
 // ============ Boshlanish ============
 if (!INIT_DATA) {
   showToast("Bu ilova faqat Telegram ichida ishlaydi ⚠️");
 }
+applyTheme();
 goToTab("home");
