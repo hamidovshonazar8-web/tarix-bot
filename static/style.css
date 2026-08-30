@@ -378,6 +378,12 @@ body {
   cursor: pointer;
   font-family: var(--font-body);
 }
+.nav-icon .icon-fill { display: none; }
+.nav-btn.active .nav-icon .icon-outline { display: none; }
+.nav-btn.active .nav-icon .icon-fill { display: block; }
+.nav-btn.active { color: var(--primary); }
+.nav-icon { transition: transform .15s ease; }
+.nav-btn:active .nav-icon { transform: scale(0.88); }
 .nav-btn.active { color: var(--primary); }
 
 /* ============ Overlay (test / natija) ============ */
@@ -482,21 +488,16 @@ body {
 /* ============ Skeleton / loading ============ */
 .loading-text { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 0; }
 
-/* ============ Sozlamalar tugmasi (Profil) ============ */
-.settings-btn {
-  display: flex; align-items: center; justify-content: space-between;
-  width: 100%;
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 13px 16px;
-  font-weight: 700; font-size: 14.5px;
-  margin: 0 0 10px;
+/* ============ Sozlamalar (Profil statistika qatorida ikonka) ============ */
+.settings-icon-btn {
+  border: none;
   cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: var(--primary);
   font-family: var(--font-body);
 }
-.settings-btn .menu-arrow { color: var(--muted); }
+.settings-icon-btn .stat-label { color: var(--muted); }
+.settings-icon-btn:active { transform: scale(0.96); }
 
 /* ============ Mavzu tanlash oynasi (Ko'rinish) ============ */
 .sheet-backdrop {
