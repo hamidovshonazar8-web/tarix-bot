@@ -180,6 +180,12 @@
           <div class="stat-value" id="profileAccuracy">—</div>
           <div class="stat-label">o'rtacha natija</div>
         </div>
+        <button class="stat-card settings-icon-btn" id="settingsBtn">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <path fill="currentColor" d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.9 2.4-1.6-.4a7.4 7.4 0 0 0-.65-1.55l.85-1.4a.9.9 0 0 0-.13-1.1l-1.1-1.1a.9.9 0 0 0-1.1-.14l-1.4.85a7.4 7.4 0 0 0-1.55-.65l-.4-1.6a.9.9 0 0 0-.87-.68h-1.6a.9.9 0 0 0-.87.68l-.4 1.6a7.4 7.4 0 0 0-1.55.65l-1.4-.85a.9.9 0 0 0-1.1.14l-1.1 1.1a.9.9 0 0 0-.14 1.1l.85 1.4a7.4 7.4 0 0 0-.65 1.55l-1.6.4a.9.9 0 0 0-.68.87v1.6a.9.9 0 0 0 .68.87l1.6.4c.16.55.38 1.07.65 1.55l-.85 1.4a.9.9 0 0 0 .14 1.1l1.1 1.1a.9.9 0 0 0 1.1.13l1.4-.85c.48.27 1 .49 1.55.65l.4 1.6a.9.9 0 0 0 .87.68h1.6a.9.9 0 0 0 .87-.68l.4-1.6a7.4 7.4 0 0 0 1.55-.65l1.4.85a.9.9 0 0 0 1.1-.13l1.1-1.1a.9.9 0 0 0 .13-1.1l-.85-1.4c.27-.48.49-1 .65-1.55l1.6-.4a.9.9 0 0 0 .68-.87v-1.6a.9.9 0 0 0-.68-.87Z"/>
+          </svg>
+          <div class="stat-label">Sozlamalar</div>
+        </button>
       </div>
 
       <button class="analysis-btn" id="analysisBtn">
@@ -187,11 +193,6 @@
         <span class="menu-arrow">›</span>
       </button>
       <div id="breakdownWrap" class="hidden breakdown-wrap"></div>
-
-      <button class="settings-btn" id="settingsBtn">
-        <span>⚙️ Sozlamalar</span>
-        <span class="menu-arrow">›</span>
-      </button>
 
       <div class="section-title" id="achTitle">Yutuqlar</div>
       <div class="ach-grid" id="achGrid"></div>
@@ -202,26 +203,88 @@
   <!-- Pastki navigatsiya -->
   <nav class="bottom-nav">
     <button class="nav-btn active" data-tab="home">
-      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 3 2 12h3v8h6v-6h2v6h6v-8h3z"/></svg>
+      <svg class="nav-icon" viewBox="0 0 24 24" width="24" height="24">
+        <g class="icon-outline">
+          <path d="M4.3 11.2 12 4.6l7.7 6.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M6.2 9.9V18a1.3 1.3 0 0 0 1.3 1.3h2.4v-5h4.2v5h2.4A1.3 1.3 0 0 0 17.8 18V9.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <path class="icon-fill" fill="currentColor" d="M12 3.4 3.5 10.7a1 1 0 0 0-.35.76V19a1.25 1.25 0 0 0 1.25 1.25H8.9v-5.7h6.2v5.7h4.5A1.25 1.25 0 0 0 20.85 19v-7.54a1 1 0 0 0-.35-.76z"/>
+      </svg>
       <span>Bosh</span>
     </button>
     <button class="nav-btn" data-tab="tests">
-      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M4 4h11a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2zm2 2v11h9V6zM17 8h3v12h-3z"/></svg>
+      <svg class="nav-icon" viewBox="0 0 24 24" width="24" height="24">
+        <g class="icon-outline">
+          <rect x="5.4" y="4.3" width="13.2" height="16.4" rx="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+          <rect x="9" y="2.7" width="6" height="3" rx="1" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M8.4 11.3h7.2M8.4 14.5h7.2M8.4 17.7h4.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </g>
+        <g class="icon-fill">
+          <rect x="5.4" y="4.3" width="13.2" height="16.4" rx="2.3" fill="currentColor"/>
+          <rect x="9" y="2.7" width="6" height="3" rx="1" fill="var(--surface)"/>
+          <path d="M8.4 11.3h7.2M8.4 14.5h7.2M8.4 17.7h4.6" stroke="var(--surface)" stroke-width="1.4" stroke-linecap="round"/>
+        </g>
+      </svg>
       <span>Testlar</span>
     </button>
     <button class="nav-btn" data-tab="season">
-      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 2c1 3-1 4-1 6a3 3 0 1 0 6 0c2 2 3 5 3 7a8 8 0 1 1-16 0c0-4 3-7 8-13z"/></svg>
+      <svg class="nav-icon" viewBox="0 0 24 24" width="24" height="24">
+        <g class="icon-outline">
+          <rect x="4.3" y="5.3" width="15.4" height="14.4" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M4.3 9.7h15.4" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M8.2 3.6v3.2M15.8 3.6v3.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </g>
+        <g class="icon-fill">
+          <rect x="4.3" y="5.3" width="15.4" height="14.4" rx="2.6" fill="currentColor"/>
+          <path d="M4.3 9.7h15.4" stroke="var(--surface)" stroke-width="1.5"/>
+          <rect x="7.3" y="3.1" width="1.8" height="3.9" rx="0.9" fill="var(--surface)"/>
+          <rect x="14.9" y="3.1" width="1.8" height="3.9" rx="0.9" fill="var(--surface)"/>
+          <circle cx="8.2" cy="13.1" r="1.15" fill="var(--surface)"/>
+          <circle cx="12" cy="13.1" r="1.15" fill="var(--surface)"/>
+          <circle cx="15.8" cy="13.1" r="1.15" fill="var(--surface)"/>
+          <circle cx="8.2" cy="16.4" r="1.15" fill="var(--surface)"/>
+          <circle cx="12" cy="16.4" r="1.15" fill="var(--surface)"/>
+        </g>
+      </svg>
       <span>Mavsum</span>
     </button>
     <button class="nav-btn" data-tab="rating">
-      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M7 4h10v3a5 5 0 0 1-4 4.9V15h3v2H8v-2h3v-3.1A5 5 0 0 1 7 7zm-4 1h3v2a4 4 0 0 1-3 3.9zm18 0v5.9a4 4 0 0 1-3-3.9V5z"/></svg>
+      <svg class="nav-icon" viewBox="0 0 24 24" width="24" height="24">
+        <g class="icon-outline">
+          <path d="M7.3 4.3h9.4v2.4a4.7 4.7 0 0 1-3.7 4.6v2.3h2.5v1.7H8.5v-1.7H11v-2.3a4.7 4.7 0 0 1-3.7-4.6z" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linejoin="round"/>
+          <path d="M7.3 5.7H4.4v1.7a3.3 3.3 0 0 0 2.9 3.3" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round"/>
+          <path d="M16.7 5.7h2.9v1.7a3.3 3.3 0 0 1-2.9 3.3" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round"/>
+          <path d="M7.8 19.5h8.4" stroke="currentColor" stroke-width="1.55" stroke-linecap="round"/>
+        </g>
+        <g class="icon-fill" fill="currentColor">
+          <path d="M7.3 4.3h9.4v2.4a4.7 4.7 0 0 1-3.7 4.6v2.3h2.5v1.7H8.5v-1.7H11v-2.3a4.7 4.7 0 0 1-3.7-4.6z"/>
+          <path d="M7.3 5.7H4.4v1.7a3.3 3.3 0 0 0 2.9 3.3v-1.9a1.9 1.9 0 0 1-.8-1.4z"/>
+          <path d="M16.7 5.7h2.9v1.7a3.3 3.3 0 0 1-2.9 3.3v-1.9a1.9 1.9 0 0 0 .8-1.4z"/>
+          <path d="M7.8 19.5h8.4" stroke="currentColor" stroke-width="1.55" stroke-linecap="round"/>
+        </g>
+      </svg>
       <span>Reyting</span>
     </button>
     <button class="nav-btn" data-tab="profile">
-      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-9 2.2-9 5v3h18v-3c0-2.8-4.6-5-9-5z"/></svg>
+      <svg class="nav-icon" viewBox="0 0 24 24" width="24" height="24">
+        <g class="icon-outline">
+          <circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+          <circle cx="12" cy="9.9" r="2.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M6.1 18.1a6.3 6.3 0 0 1 11.8 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </g>
+        <g class="icon-fill">
+          <defs><clipPath id="navProfileClip"><circle cx="12" cy="12" r="8.6"/></clipPath></defs>
+          <circle cx="12" cy="12" r="8.6" fill="currentColor"/>
+          <g clip-path="url(#navProfileClip)">
+            <circle cx="12" cy="9.9" r="2.6" fill="var(--surface)"/>
+            <ellipse cx="12" cy="19.3" rx="6.4" ry="5.6" fill="var(--surface)"/>
+          </g>
+        </g>
+      </svg>
       <span>Profil</span>
     </button>
   </nav>
+
 
   <!-- ============ TEST OVERLAY ============ -->
   <div class="overlay hidden" id="quizOverlay">
