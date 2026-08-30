@@ -5,6 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Tarix Test</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+  // Sahifa chizilishidan oldin mavzuni belgilaymiz (yaltillashning oldini olish uchun)
+  (function () {
+    try {
+      var pref = localStorage.getItem('tarix_theme_pref') || 'system';
+      var resolved = pref;
+      if (pref === 'system') {
+        var tg = window.Telegram && window.Telegram.WebApp;
+        if (tg && tg.colorScheme) {
+          resolved = tg.colorScheme;
+        } else {
+          resolved = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+      }
+      document.documentElement.setAttribute('data-theme', resolved);
+    } catch (e) { /* localStorage mavjud bo'lmasa - yorug' mavzu bilan davom etamiz */ }
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/style.css">
@@ -170,14 +188,13 @@
       </button>
       <div id="breakdownWrap" class="hidden breakdown-wrap"></div>
 
-      <div class="section-title" id="achTitle">Yutuqlar</div>
-      <div class="ach-grid" id="achGrid"></div>
-
-      <button class="analysis-btn hidden" id="adminAddBtn"
-        style="background:linear-gradient(135deg,#FFE3C0,#FFC15E); color:#7A4B00;">
-        <span>➕ Savol qo'shish (Admin)</span>
+      <button class="settings-btn" id="settingsBtn">
+        <span>⚙️ Sozlamalar</span>
         <span class="menu-arrow">›</span>
       </button>
+
+      <div class="section-title" id="achTitle">Yutuqlar</div>
+      <div class="ach-grid" id="achGrid"></div>
     </section>
 
   </main>
@@ -246,33 +263,66 @@
     </div>
   </div>
 
-  <!-- ============ ADMIN: SAVOL QO'SHISH OVERLAY ============ -->
-  <div class="overlay hidden" id="adminOverlay">
-    <div class="quiz-top">
-      <button class="quiz-close" id="adminCloseBtn">✕</button>
-      <div class="page-title" style="margin:0; font-size:16px;">➕ Savol qo'shish</div>
-    </div>
-    <div style="overflow-y:auto; flex:1; padding-bottom:20px;">
-      <div class="section-title">Sinf</div>
-      <div class="class-grid" id="adminClassGrid"></div>
-
-      <div class="section-title">Fan</div>
-      <div class="menu-list" id="adminSubjectList"></div>
-
-      <div class="section-title">Mavzu</div>
-      <input type="text" id="adminTopicInput" placeholder="Masalan: Amir Temur va Temuriylar davri"
-        style="width:100%; padding:12px 14px; border-radius:16px; border:2px solid var(--border);
-               font-size:14px; font-family:var(--font-body); background:var(--surface);">
-
-      <div class="section-title">Savol matni</div>
-      <textarea id="adminQuestionInput" rows="3" placeholder="Savolni yozing..."
-        style="width:100%; padding:12px 14px; border-radius:16px; border:2px solid var(--border);
-               font-size:14px; font-family:var(--font-body); background:var(--surface); resize:vertical;"></textarea>
-
-      <div class="section-title">Variantlar (to'g'risini belgilang)</div>
-      <div id="adminOptionsWrap" style="display:flex; flex-direction:column; gap:10px;"></div>
-
-      <button class="result-btn primary" id="adminSubmitBtn" style="margin-top:20px;">✅ Saqlash</button>
+  <!-- ============ SOZLAMALAR: KO'RINISH (mavzu tanlash) ============ -->
+  <div class="sheet-backdrop hidden" id="themeSheetBackdrop">
+    <div class="theme-sheet-card">
+      <div class="theme-sheet-top">
+        <div>
+          <div class="theme-sheet-title">Ko'rinish</div>
+          <div class="theme-sheet-sub">Ilova mavzusini tanlang — tanlov saqlanadi.</div>
+        </div>
+        <button class="theme-sheet-close" id="themeSheetClose">✕</button>
+      </div>
+      <div class="theme-options">
+        <button class="theme-option" data-theme-choice="light">
+          <div class="theme-preview light">
+            <span class="tp-dot"></span>
+            <div class="tp-bar"></div>
+            <div class="tp-bar accent"></div>
+            <div class="tp-row">
+              <div class="tp-box"></div>
+              <div class="tp-box"></div>
+            </div>
+            <div class="tp-row">
+              <div class="tp-box"></div>
+              <div class="tp-box"></div>
+            </div>
+          </div>
+          <div class="theme-option-label"><span class="check-slot"></span>Yorug'</div>
+        </button>
+        <button class="theme-option" data-theme-choice="dark">
+          <div class="theme-preview dark">
+            <span class="tp-dot"></span>
+            <div class="tp-bar"></div>
+            <div class="tp-bar accent"></div>
+            <div class="tp-row">
+              <div class="tp-box"></div>
+              <div class="tp-box"></div>
+            </div>
+            <div class="tp-row">
+              <div class="tp-box"></div>
+              <div class="tp-box"></div>
+            </div>
+          </div>
+          <div class="theme-option-label"><span class="check-slot"></span>Qorong'i</div>
+        </button>
+        <button class="theme-option" data-theme-choice="system">
+          <div class="theme-preview system">
+            <span class="tp-dot"></span>
+            <div class="tp-bar"></div>
+            <div class="tp-bar accent"></div>
+            <div class="tp-row">
+              <div class="tp-box"></div>
+              <div class="tp-box"></div>
+            </div>
+            <div class="tp-row">
+              <div class="tp-box"></div>
+              <div class="tp-box"></div>
+            </div>
+          </div>
+          <div class="theme-option-label"><span class="check-slot"></span>Tizim</div>
+        </button>
+      </div>
     </div>
   </div>
 
